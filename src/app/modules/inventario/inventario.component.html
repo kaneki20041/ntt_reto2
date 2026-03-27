@@ -1,0 +1,281 @@
+<div class="erp-shell">
+
+  <!-- SIDEBAR NAV -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-name">ERP<em>Gen</em></span>
+    </div>
+    <nav class="nav-menu">
+      <a class="nav-item" routerLink="/finanzas"><span class="nav-icon">◈</span> Finanzas</a>
+      <a class="nav-item active" routerLink="/inventario"><span class="nav-icon">◉</span> Inventario</a>
+      <a class="nav-item" routerLink="/compras"><span class="nav-icon">◫</span> Compras</a>
+      <a class="nav-item" routerLink="/ventas"><span class="nav-icon">◧</span> Ventas</a>
+      <a class="nav-item" routerLink="/rrhh"><span class="nav-icon">◍</span> RRHH</a>
+      <a class="nav-item" routerLink="/reportes"><span class="nav-icon">◰</span> Reportes</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="agent-status">
+        <span class="pulse"></span> Agente Logístico activo
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-panel">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="module-title">INVENTARIO <span class="module-sub">& ALMACENES</span></h1>
+        <span class="module-badge">Módulo Activo</span>
+      </div>
+      <div class="topbar-right">
+        <div class="search-bar">
+          <span class="search-icon">⌕</span>
+          <input type="text" placeholder="Buscar producto, SKU, categoría..." [(ngModel)]="searchTerm" (input)="filtrarProductos()" />
+        </div>
+        <button class="btn-primary" (click)="abrirModalProducto()">+ Nuevo Producto</button>
+      </div>
+    </header>
+
+    <!-- KPI STRIP -->
+    <section class="kpi-strip">
+      <div class="kpi-card" [class.kpi-alert]="kpis.criticos > 0">
+        <span class="kpi-label">STOCK CRÍTICO</span>
+        <span class="kpi-value">{{ kpis.criticos }}</span>
+        <span class="kpi-sub">productos</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">TOTAL PRODUCTOS</span>
+        <span class="kpi-value">{{ kpis.total }}</span>
+        <span class="kpi-sub">SKUs activos</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">VALOR EN ALMACÉN</span>
+        <span class="kpi-value">S/ {{ kpis.valorTotal | number:'1.0-0' }}</span>
+        <span class="kpi-sub">soles</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">ALERTAS PENDIENTES</span>
+        <span class="kpi-value kpi-warn">{{ kpis.alertas }}</span>
+        <span class="kpi-sub">reposiciones</span>
+      </div>
+      <div class="kpi-card kpi-ai">
+        <span class="kpi-label">IA SUGIERE</span>
+        <span class="kpi-value">{{ kpis.sugerencias }}</span>
+        <span class="kpi-sub">acciones hoy</span>
+      </div>
+    </section>
+
+    <!-- GRID: TABLA + PANEL IA -->
+    <div class="content-grid">
+
+      <!-- TABLA DE INVENTARIO -->
+      <section class="tabla-section">
+        <div class="section-header">
+          <h2>STOCK EN TIEMPO REAL</h2>
+          <div class="filter-tabs">
+            <button class="tab" [class.tab-active]="filtroActivo === 'todos'" (click)="setFiltro('todos')">Todos</button>
+            <button class="tab" [class.tab-active]="filtroActivo === 'critico'" (click)="setFiltro('critico')">Crítico</button>
+            <button class="tab" [class.tab-active]="filtroActivo === 'normal'" (click)="setFiltro('normal')">Normal</button>
+            <button class="tab" [class.tab-active]="filtroActivo === 'exceso'" (click)="setFiltro('exceso')">Exceso</button>
+          </div>
+        </div>
+
+        <div class="tabla-wrapper">
+          <table class="erp-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>PRODUCTO</th>
+                <th>CATEGORÍA</th>
+                <th>ALMACÉN</th>
+                <th>STOCK</th>
+                <th>MÍN.</th>
+                <th>ESTADO</th>
+                <th>ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of productosFiltrados" [class.row-critico]="p.estado === 'critico'" [class.row-exceso]="p.estado === 'exceso'">
+                <td class="sku-cell">{{ p.sku }}</td>
+                <td class="nombre-cell">{{ p.nombre }}</td>
+                <td>{{ p.categoria }}</td>
+                <td>{{ p.almacen }}</td>
+                <td class="stock-cell">
+                  <div class="stock-bar-wrap">
+                    <span class="stock-num">{{ p.stock }}</span>
+                    <div class="stock-bar">
+                      <div class="stock-fill" [style.width.%]="getStockPct(p)" [class]="'fill-' + p.estado"></div>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ p.minimo }}</td>
+                <td>
+                  <span class="badge" [class]="'badge-' + p.estado">
+                    {{ getEstadoLabel(p.estado) }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Ver detalle" (click)="verDetalle(p)">◉</button>
+                  <button class="btn-icon" title="Ajustar stock" (click)="ajustarStock(p)">✎</button>
+                  <button class="btn-icon btn-ai" title="Consultar IA" (click)="consultarIA(p)">✦</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tabla-footer">
+          <span>Mostrando {{ productosFiltrados.length }} de {{ productos.length }} productos</span>
+          <div class="pagination">
+            <button class="pg-btn" (click)="paginar(-1)" [disabled]="paginaActual === 1">‹</button>
+            <span class="pg-info">{{ paginaActual }} / {{ totalPaginas }}</span>
+            <button class="pg-btn" (click)="paginar(1)" [disabled]="paginaActual === totalPaginas">›</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL IA -->
+      <aside class="ia-panel">
+        <div class="ia-header">
+          <span class="ia-icon">✦</span>
+          <h3>AGENTE LOGÍSTICO</h3>
+          <span class="ia-live">EN LÍNEA</span>
+        </div>
+
+        <!-- CHAT IA -->
+        <div class="ia-chat" #chatContainer>
+          <div *ngFor="let msg of mensajesIA" class="ia-msg" [class.ia-msg-user]="msg.role === 'user'" [class.ia-msg-agent]="msg.role === 'agent'">
+            <span class="msg-role">{{ msg.role === 'user' ? 'TÚ' : 'AGENTE' }}</span>
+            <p class="msg-text">{{ msg.text }}</p>
+            <span class="msg-time">{{ msg.hora }}</span>
+          </div>
+          <div *ngIf="iaThinking" class="ia-thinking">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+
+        <!-- SUGERENCIAS RÁPIDAS -->
+        <div class="quick-chips">
+          <button class="chip" (click)="enviarConsulta('¿Qué productos están en stock crítico?')">Stock crítico</button>
+          <button class="chip" (click)="enviarConsulta('¿Qué debo reponer esta semana?')">Plan reposición</button>
+          <button class="chip" (click)="enviarConsulta('¿Cuáles tienen exceso de inventario?')">Exceso stock</button>
+          <button class="chip" (click)="enviarConsulta('Genera un resumen del inventario actual')">Resumen IA</button>
+        </div>
+
+        <!-- INPUT CONSULTA -->
+        <div class="ia-input-wrap">
+          <input type="text" class="ia-input" placeholder="Consulta al agente en lenguaje natural..." [(ngModel)]="consultaTexto" (keyup.enter)="enviarConsulta()" />
+          <button class="ia-send" (click)="enviarConsulta()" [disabled]="iaThinking || !consultaTexto.trim()">
+            <span *ngIf="!iaThinking">➤</span>
+            <span *ngIf="iaThinking">…</span>
+          </button>
+        </div>
+      </aside>
+
+    </div><!-- end content-grid -->
+
+    <!-- PANEL ALERTAS -->
+    <section class="alertas-section" *ngIf="alertas.length > 0">
+      <h2>⚠ ALERTAS DE INVENTARIO</h2>
+      <div class="alertas-grid">
+        <div class="alerta-card" *ngFor="let a of alertas" [class.alerta-critica]="a.nivel === 'critico'">
+          <div class="alerta-top">
+            <span class="alerta-icon">{{ a.nivel === 'critico' ? '▲' : '◆' }}</span>
+            <span class="alerta-titulo">{{ a.producto }}</span>
+            <span class="alerta-badge" [class]="'badge-' + a.nivel">{{ a.nivel.toUpperCase() }}</span>
+          </div>
+          <p class="alerta-msg">{{ a.mensaje }}</p>
+          <div class="alerta-actions">
+            <button class="btn-sm" (click)="generarOrdenCompra(a)">Generar OC</button>
+            <button class="btn-sm btn-sm-ghost" (click)="ignorarAlerta(a)">Ignorar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- end main-panel -->
+
+</div><!-- end erp-shell -->
+
+<!-- MODAL DETALLE PRODUCTO -->
+<div class="modal-overlay" *ngIf="modalDetalle" (click)="cerrarModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>DETALLE DE PRODUCTO</h3>
+      <button class="modal-close" (click)="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body" *ngIf="productoSeleccionado">
+      <div class="detail-grid">
+        <div class="detail-field">
+          <label>SKU</label><span>{{ productoSeleccionado.sku }}</span>
+        </div>
+        <div class="detail-field">
+          <label>NOMBRE</label><span>{{ productoSeleccionado.nombre }}</span>
+        </div>
+        <div class="detail-field">
+          <label>CATEGORÍA</label><span>{{ productoSeleccionado.categoria }}</span>
+        </div>
+        <div class="detail-field">
+          <label>ALMACÉN</label><span>{{ productoSeleccionado.almacen }}</span>
+        </div>
+        <div class="detail-field">
+          <label>STOCK ACTUAL</label><span class="val-big">{{ productoSeleccionado.stock }}</span>
+        </div>
+        <div class="detail-field">
+          <label>STOCK MÍNIMO</label><span>{{ productoSeleccionado.minimo }}</span>
+        </div>
+        <div class="detail-field">
+          <label>STOCK MÁXIMO</label><span>{{ productoSeleccionado.maximo }}</span>
+        </div>
+        <div class="detail-field">
+          <label>COSTO UNITARIO</label><span>S/ {{ productoSeleccionado.costo | number:'1.2-2' }}</span>
+        </div>
+        <div class="detail-field detail-full">
+          <label>ESTADO</label>
+          <span class="badge" [class]="'badge-' + productoSeleccionado.estado">{{ getEstadoLabel(productoSeleccionado.estado) }}</span>
+        </div>
+      </div>
+
+      <div class="ia-suggestion-box" *ngIf="sugerenciaIA">
+        <span class="ia-icon-sm">✦</span>
+        <p>{{ sugerenciaIA }}</p>
+      </div>
+
+      <button class="btn-ai-full" (click)="analizarProductoConIA(productoSeleccionado)">
+        ✦ Analizar con Agente Logístico
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AJUSTAR STOCK -->
+<div class="modal-overlay" *ngIf="modalAjuste" (click)="cerrarModal()">
+  <div class="modal modal-sm" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>AJUSTE DE STOCK</h3>
+      <button class="modal-close" (click)="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body" *ngIf="productoSeleccionado">
+      <p class="ajuste-producto">{{ productoSeleccionado.nombre }} — Stock actual: <strong>{{ productoSeleccionado.stock }}</strong></p>
+      <div class="ajuste-controls">
+        <label>Tipo de movimiento</label>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" [(ngModel)]="tipoAjuste" value="entrada" /> Entrada</label>
+          <label class="radio-opt"><input type="radio" [(ngModel)]="tipoAjuste" value="salida" /> Salida</label>
+          <label class="radio-opt"><input type="radio" [(ngModel)]="tipoAjuste" value="ajuste" /> Ajuste directo</label>
+        </div>
+        <label>Cantidad</label>
+        <input type="number" class="field-input" [(ngModel)]="cantidadAjuste" min="0" />
+        <label>Motivo</label>
+        <textarea class="field-input" [(ngModel)]="motivoAjuste" rows="2" placeholder="Describe el motivo del movimiento..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-primary" (click)="confirmarAjuste()">Confirmar Ajuste</button>
+        <button class="btn-ghost" (click)="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>

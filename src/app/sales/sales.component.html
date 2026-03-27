@@ -1,0 +1,171 @@
+<div class="h-[calc(100vh-80px)] p-6 gap-6 font-sans">
+  
+  <header class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="p-3 bg-cyber-purple/20 rounded-2xl border border-cyber-purple/30 text-cyber-purple shadow-neon-purple backdrop-blur-md">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </div>
+      <div>
+        <h1 class="text-3xl font-black tracking-tight text-white mb-1">Smart POS</h1>
+        <p class="text-slate-400 font-medium">Cajero Inteligente y Módulo de Pedidos</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Split View Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100%-100px)]">
+    
+    <!-- LEFT SIDE: Catalog & Smart Input -->
+    <div class="col-span-1 lg:col-span-8 flex flex-col gap-6 h-full">
+      
+      <!-- Smart Input Conversacional -->
+      <div class="glass-panel p-2">
+        <div class="relative flex items-center bg-slate-900/50 rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-cyber-neon/50 transition-all">
+          <button class="pl-4 pr-3 text-slate-400 hover:text-cyber-neon transition-colors tooltip peer">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+          </button>
+          <input 
+            type="text" 
+            [(ngModel)]="smartQuery"
+            (keyup.enter)="processSmartCommand()"
+            placeholder="Comando rápido (ej. 'Añade 2 monitores LG' o 'Quiero un teclado Logitech')"
+            class="w-full bg-transparent border-none text-white py-4 px-2 focus:outline-none placeholder-slate-600 font-medium text-lg"
+          >
+          <button 
+            (click)="processSmartCommand()"
+            class="px-6 py-4 bg-cyber-neon/10 text-cyber-neon font-bold hover:bg-cyber-neon hover:text-minerva-dark transition-all duration-300">
+            Enter
+          </button>
+        </div>
+      </div>
+
+      <!-- Catálogo de Productos (Cards) -->
+      <div class="flex-1 glass-panel p-6 overflow-y-auto hide-scrollbar">
+        <h2 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-cyber-neon"></div>
+          Catálogo en Línea
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          @for (product of products(); track product.id) {
+            <!-- Product Card -->
+            <div 
+              class="glass-card flex flex-col h-full group"
+              [ngClass]="{'opacity-50 grayscale cursor-not-allowed': product.stockCurrent === 0}"
+              (click)="product.stockCurrent > 0 ? addToCart(product) : null">
+              <div class="h-32 bg-slate-900/50 p-4 flex justify-center items-center relative rounded-t-2xl overflow-hidden">
+                @if (product.imageUrls.length) {
+                  <img [src]="product.imageUrls[0]" class="h-full object-contain filter drop-shadow-xl group-hover:scale-110 transition-transform duration-500">
+                }
+                <!-- Stock Badge overlay -->
+                <div class="absolute top-2 right-2">
+                  @if (product.stockCurrent === 0) {
+                    <span class="badge-critical border-red-500">Agotado</span>
+                  } @else if (product.stockCurrent <= product.stockMinimum) {
+                    <span class="badge-warning">Quedan {{product.stockCurrent}}</span>
+                  }
+                </div>
+              </div>
+              <div class="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <p class="text-xs text-cyber-neon font-mono mb-1">{{product.sku}}</p>
+                  <h3 class="font-bold text-white leading-tight mb-2 line-clamp-2">{{product.name}}</h3>
+                </div>
+                <div class="flex justify-between items-end mt-auto">
+                  <span class="text-xl font-black text-emerald-400">
+                    {{(product.priceCents / 100) | currency}}
+                  </span>
+                  <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center group-hover:bg-cyber-neon group-hover:text-minerva-dark transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE: Cart & Cross-Selling -->
+    <div class="col-span-1 lg:col-span-4 flex flex-col gap-6 h-full">
+      
+      <!-- Shopping Cart -->
+      <div class="glass-panel p-6 flex-1 flex flex-col">
+        <h2 class="text-xl font-bold text-white mb-6 flex items-center justify-between">
+          <span>Orden Actual</span>
+          <span class="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-sm">
+            {{cart().length}} items
+          </span>
+        </h2>
+
+        <!-- Cart Items -->
+        <div class="flex-1 overflow-y-auto mb-6 hide-scrollbar pr-2 space-y-4">
+          @for (item of cart(); track item.product.id) {
+            <div class="flex gap-4 p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 group hover:border-cyber-neon/30 transition-colors animate-[fadeIn_0.3s_ease-out]">
+              <div class="w-16 h-16 bg-slate-900 rounded-lg p-2 shrink-0">
+                <img [src]="item.product.imageUrls[0]" class="w-full h-full object-contain">
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-sm font-bold text-white truncate">{{item.product.name}}</h4>
+                <div class="flex justify-between items-center mt-2">
+                  <span class="text-emerald-400 font-mono text-sm">{{(item.product.priceCents / 100) | currency}}</span>
+                  <div class="flex items-center gap-2 bg-slate-900/80 rounded-lg px-2 text-sm border border-slate-700">
+                    <span class="text-slate-400 px-1 font-mono">x{{item.quantity}}</span>
+                  </div>
+                </div>
+              </div>
+              <button (click)="removeFromCart(item.product.id)" class="text-slate-500 hover:text-red-400 px-1 transition-colors self-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          } @empty {
+            <div class="h-full flex flex-col items-center justify-center text-slate-500 gap-4 opacity-50">
+              <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              <p>El carrito está vacío</p>
+            </div>
+          }
+        </div>
+
+        <!-- Totals & Pay -->
+        <div class="border-t border-slate-700 pt-5 mt-auto">
+          <div class="flex justify-between items-center mb-6">
+            <span class="text-slate-400 text-lg">Total</span>
+            <span class="text-3xl font-black text-white text-shadow-neon">{{(cartTotalCents() / 100) | currency}}</span>
+          </div>
+          <button 
+            [disabled]="cart().length === 0"
+            (click)="checkout()"
+            class="w-full btn-primary py-4 text-lg">
+            Procesar Pago
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Cross Selling AI Panel -->
+      @if (crossSellingSuggestions().length > 0) {
+        <div class="glass-panel p-5 bg-indigo-900/20 border-indigo-500/30">
+          <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest flex items-center gap-2 mb-4">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Sugerencias IA
+          </h3>
+          <div class="space-y-3">
+            @for (suggestion of crossSellingSuggestions(); track suggestion.id) {
+              <div 
+                class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors"
+                (click)="addToCart(suggestion)">
+                <img [src]="suggestion.imageUrls[0]" class="w-10 h-10 object-contain bg-slate-900 rounded-md p-1">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-white truncate font-medium">{{suggestion.name}}</p>
+                  <p class="text-xs text-emerald-400">{{(suggestion.priceCents / 100) | currency}}</p>
+                </div>
+                <div class="text-cyber-neon px-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
